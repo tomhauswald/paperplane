@@ -13,4 +13,4 @@ for src in ${sources}; do
 done
 
 mkdir -p bin
-clang++-10 -std=c++20 -Ofast -march=native -o bin/search obj/*.o
+clang++-10 -o bin/search obj/*.o -lstdc++fs

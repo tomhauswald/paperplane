@@ -24,7 +24,6 @@ docker run \
 pdf_sha1="$(./util/_sha1.sh db/${image_sha1}/PDF)"
 
 cp ${1} db/${image_sha1}/IMAGE
-echo "${image_sha1}" > db/${image_sha1}/IMAGE_SHA1
 echo "${pdf_sha1}" > db/${image_sha1}/PDF_SHA1
 
 ./util/_tokenize.sh db/${image_sha1}/TEXT > db/${image_sha1}/TOKENS
