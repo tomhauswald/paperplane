@@ -67,7 +67,12 @@ ScoreDatabaseWrtQuery(Database const &db,
 }
 
 int main(int argc, char const **argv) {
-  assert(argc >= 3);
+
+  if (argc < 3) {
+    printf("Usage: ./search /path/to/db queryToken1 ... queryTokenN\n");
+    return 1;
+  }
+
   auto db = LoadDatabase(argv[1]);
 
   std::vector<std::string> query(argc - 2);
