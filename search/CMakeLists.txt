@@ -12,6 +12,9 @@ add_compile_options(
 )
 
 add_executable(paperplane-search
+  ./source/fs.cc
+  ./source/hash.cc
+  ./source/db.cc
   ./source/main.cc
 )
 
