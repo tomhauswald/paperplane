@@ -76,7 +76,7 @@ int main(int argc, char const **argv) {
   auto db = LoadDatabase(argv[1]);
 
   std::vector<std::string> query(argc - 2);
-  for (size_t i = 2; i < argc; ++i)
+  for (size_t i = 2; i < static_cast<size_t>(argc); ++i)
     query[i - 2] = std::string(argv[i]);
 
   printf("Query:");
