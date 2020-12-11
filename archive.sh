@@ -1,33 +1,39 @@
 #!/bin/bash
 
-image_sha1="$(./util/_sha1.sh ${1})"
-mkdir -p db/${image_sha1} 
+set -o pipefail
+
+if [ ! -f "${1}" ]; then
+  echo "Usage: [lang=] ./archive.sh /path/to/image"
+  exit 1
+fi
+
+src_image_path="$(realpath ${1})"
+id="$(uuidgen)"
+echo "Generated document id ${id} for file ${src_image_path}."
+
+set -x
+
+mkdir -p ./db/${id} 
+install -m 0644 ${src_image_path} ./db/${id}/image
 
 docker run \
  --rm -i \
- -v $(realpath .):/mnt/workspace:rw \
- -v $(realpath ${1}):$(realpath ${1}):ro \
+ -v $(realpath ./db/${id}):/mnt/doc:rw \
  -w /mnt/workspace \
  jbarlow83/ocrmypdf \
  --output-type pdfa-3 \
- --language ${lang} \
- --rotate-pages \
- --deskew \
- --clean \
+ --language ${lang-"deu+eng"} \
+ $(false && echo --rotate-pages) \
+ $(false && echo --deskew) \
+ $(false && echo --clean) \
  --optimize 1 \
  --force-ocr \
- --oversample 800 \
- --sidecar db/${image_sha1}/TEXT \
- $(realpath ${1}) \
- db/${image_sha1}/PDF
+ $(false && echo --oversample 800) \
+ --sidecar /mnt/doc/text \
+ /mnt/doc/image \
+ /mnt/doc/pdf
 
-pdf_sha1="$(./util/_sha1.sh db/${image_sha1}/PDF)"
-
-cp ${1} db/${image_sha1}/IMAGE
-echo "${pdf_sha1}" > db/${image_sha1}/PDF_SHA1
-
-./util/_tokenize.sh db/${image_sha1}/TEXT > db/${image_sha1}/TOKENS
-
-sudo chown -R $(id -u):$(id -g) db/${image_sha1}
-chmod 0644 db/${image_sha1}/*
+./util/_sha1.sh     ./db/${id}/pdf   > ./db/${id}/pdf-checksum
+./util/_sha1.sh     ./db/${id}/image > ./db/${id}/image-checksum
+./util/_tokenize.sh ./db/${id}/text  > ./db/${id}/tokens
 
