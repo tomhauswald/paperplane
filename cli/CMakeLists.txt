@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(paperplane-search)
+project(paperplane-cli)
 
 add_compile_options(
   -std=c++20
@@ -11,13 +11,12 @@ add_compile_options(
   -Werror
 )
 
-add_executable(paperplane-search
+add_executable(paperplane
   ./source/fs.cc
-  ./source/hash.cc
   ./source/db.cc
   ./source/main.cc
 )
 
-target_link_libraries(paperplane-search
+target_link_libraries(paperplane
   -lstdc++fs
 )
