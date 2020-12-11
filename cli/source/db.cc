@@ -37,10 +37,10 @@ void DumpDatabase(Database const &db) {
 }
 
 void DumpQuery(Query const &query) {
-  printf("Query: '");
+  printf("Query:");
   for (auto const &token : query.tokens)
-    printf("%s ", token.c_str());
-  printf("'\n");
+    printf(" %s ", token.c_str());
+  printf("\n");
 }
 
 float ComputeDocumentMatch(Document const &doc, Query const &query) {

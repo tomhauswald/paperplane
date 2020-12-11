@@ -9,11 +9,10 @@ struct Context {
   std::optional<ppp::db::Query> query;
 };
 
-int usage() {
-  printf("Usage scenarios:\n");
-  printf(" (+) Dump Database: ./paperplane /path/to/db dump\n");
-  printf(" (+) Run Query: ./paperplane /path/to/db query tokens...\n");
-  return 1;
+void PrintUsage() {
+  printf("Usage:\n");
+  printf(" (Dump Database) ./paperplane /path/to/db dump\n");
+  printf(" (Run Query)     ./paperplane /path/to/db query tokens...\n");
 }
 
 std::optional<Context> ParseContext(int argc, char const **argv) {
@@ -55,8 +54,10 @@ std::optional<Context> ParseContext(int argc, char const **argv) {
 
 int main(int argc, char const **argv) {
   auto ctx = ParseContext(argc, argv);
-  if (!ctx)
-    return usage();
+  if (!ctx) {
+    PrintUsage();
+    return 1;
+  }
 
   auto db = ppp::db::LoadDatabase(ctx->db_path);
 
@@ -71,6 +72,8 @@ int main(int argc, char const **argv) {
     } else {
       printf("Best matching document is %s with score %f.\n",
              match->document.id.c_str(), match->score);
+      printf("The PDF is located here: %s.\n",
+             (db.path + "/" + match->document.id + "/pdf").c_str());
     }
   }
 
