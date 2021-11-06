@@ -1,22 +1,23 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.10)
 
-project(paperplane-cli)
+project(paperplane)
 
-add_compile_options(
-  -std=c++20
-  -Ofast
-  -march=native
-  -Wall
-  -Wextra
-  -Werror
+add_executable(pppcli
+  ./source/ppp_cli.cc
+  ./source/ppp_db.cc
+  ./source/ppp_fs.cc
 )
 
-add_executable(paperplane
-  ./source/fs.cc
-  ./source/db.cc
-  ./source/main.cc
+target_compile_options(pppcli
+  PRIVATE -std=c++20
+  PRIVATE -Ofast
+  PRIVATE -march=native
+  PRIVATE -Wall
+  PRIVATE -Wextra
+  PRIVATE -Wno-unused-variable
+  PRIVATE -Werror
 )
 
-target_link_libraries(paperplane
-  -lstdc++fs
+target_link_libraries(pppcli
+  PRIVATE -lstdc++fs
 )

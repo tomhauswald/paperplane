@@ -1,7 +1,9 @@
 #include <cstdio>
 
-#include "db.hh"
-#include "fs.hh"
+#include "ppp_db.h"
+#include "ppp_fs.h"
+
+namespace ppp {
 
 struct Context {
   std::string db_path;
@@ -11,8 +13,8 @@ struct Context {
 
 void PrintUsage() {
   printf("Usage:\n");
-  printf(" (Dump Database) ./paperplane /path/to/db dump\n");
-  printf(" (Run Query)     ./paperplane /path/to/db query tokens...\n");
+  printf(" (Dump Database) ./pppcli /path/to/db dump\n");
+  printf(" (Run Query)     ./pppcli /path/to/db query tokens...\n");
 }
 
 std::optional<Context> ParseContext(int argc, char const **argv) {
@@ -43,19 +45,23 @@ std::optional<Context> ParseContext(int argc, char const **argv) {
       printf("Error: Query operation takes at least one argument.\n");
       return std::nullopt;
     }
-    ctx.query = ppp::db::Query{};
-    ctx.query->tokens = std::vector<std::string>(argc - 3);
+
+    std::vector<std::string> words;
     for (int arg = 3; arg < argc; ++arg)
-      ctx.query->tokens[arg - 3] = argv[arg];
+      words.emplace_back(argv[arg]);
+    ctx.query = ppp::db::CreateQuery(words);
   }
 
   return ctx;
 }
 
+} // namespace ppp
+
 int main(int argc, char const **argv) {
-  auto ctx = ParseContext(argc, argv);
+
+  auto ctx = ppp::ParseContext(argc, argv);
   if (!ctx) {
-    PrintUsage();
+    ppp::PrintUsage();
     return 1;
   }
 
@@ -70,10 +76,9 @@ int main(int argc, char const **argv) {
     if (!match || match->score < 1) {
       printf("No matching document(s) found.\n");
     } else {
-      printf("Best matching document is %s with score %f.\n",
-             match->document.id.c_str(), match->score);
-      printf("The PDF is located here: %s.\n",
-             (db.path + "/" + match->document.id + "/pdf").c_str());
+      printf("Best match is %s with score %0.2f.\n",
+             ppp::db::GetDocumentPath(db, match->document).c_str(),
+             match->score);
     }
   }
 

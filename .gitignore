@@ -1,3 +1,4 @@
 db/
 build/
-compile_flags.txt
+**/.clangd/
+compile_commands.json
