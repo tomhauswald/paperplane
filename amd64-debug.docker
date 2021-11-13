@@ -15,6 +15,7 @@ RUN pip install flask
 
 COPY ./cli/ /tmp/pppcli.source/
 WORKDIR /tmp/pppcli.source
+RUN rm -rf build
 RUN mkdir -p build 
 WORKDIR /tmp/pppcli.source/build
 RUN cmake -DCMAKE_BUILD_TYPE=RelWithDebugInfo ..

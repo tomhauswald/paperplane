@@ -1,8 +1,8 @@
 import os
-import json
 import flask
 import subprocess
 import time
+import concurrent.futures
 
 app = flask.Flask(__name__)
 
@@ -30,45 +30,79 @@ def serve_file(path):
         return flask.abort(404)
 
 
-def invoke_pppcli(args):
-    pid = subprocess.Popen(["/bin/pppcli"] + args, stdout=subprocess.PIPE)
-    pid.wait()
-    return pid.stdout.read()
+background_worker = concurrent.futures.ProcessPoolExecutor(max_workers=1)
+num_background_jobs = 0
 
 
-def invoke_archive_script(args):
-    pid = subprocess.Popen(
-        ["/bin/sh", "/bin/scripts/archive.sh"] + args, stdout=subprocess.PIPE)
-    pid.wait()
-    return pid.stdout.read()
+def run_native_cmd(cmd) -> str:
+    process = subprocess.Popen(
+        cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+
+    (stdout, stderr) = process.communicate()
+
+    if (process.returncode != 0) or stderr:
+        raise RuntimeError(stderr.decode("utf-8"))
+    else:
+        return stdout.decode("utf-8")
+
+
+def run_native_cmd_async(cmd, on_success, on_error):
+    global num_background_jobs
+    num_background_jobs += 1
+
+    def _callback(future):
+        global num_background_jobs
+        num_background_jobs -= 1
+        err = future.exception()
+        on_error(err) if err else on_success(future.result())
+
+    background_worker.submit(
+        run_native_cmd, cmd
+    ).add_done_callback(_callback)
 
 
 @app.route("/")
 def synopsis():
     return (stringify_list([
-        "Get a list of all documents     => [ GET  ] /doc",
-        "Upload a new image for archival => [ POST ] /upload (file=@xyz)"
+        "+-----------------------------------------------+--------+---------------------------+",
+        "| DESCRIPTION                                   | METHOD | PATH                      |",
+        "+-----------------------------------------------+--------+---------------------------+",
+        "| List all available document ids               | GET    | /doc                      |",
+        "| Queue the archival of a new image             | POST   | /upload (file=@image.jpg) |",
+        "| Get some status information                   | GET    | /status                   |",
+        "+-----------------------------------------------+--------+---------------------------+"
     ]), 200)
 
 
+@ app.route("/dump")
+def dump_db():
+    return (run_native_cmd("/bin/pppcli /opt/paperplane/db dump;"), 200)
+
+
 @ app.route("/doc")
-def get_all_docs():
+def list_docs():
     return (stringify_list([
-        f"/doc/{ent.name}"
-        for ent in os.scandir("/opt/paperplane/db")
-        if ent.is_dir()
+        path.name for path in os.scandir("/opt/paperplane/db")
+        if path.is_dir()
     ]), 200)
 
 
 @ app.route("/doc/<id>")
-def get_doc_by_id(id):
-    return stringify_list([
-        "/tokens",
-        "/text",
-        "/pdf",
-        "/pdf-hash",
-        "/image",
-    ])
+def synopsis_single_doc(_):
+    return (stringify_list([
+        "+-------------------------------------------------------+-------+------------------+",
+        "| DESCRIPTION                                           | METOD | PATH             |",
+        "+-------------------------------------------------------+-------+------------------+",
+        "| Get the originally uploaded image                     | GET   | /doc/id/image    |",
+        "| Get the PDF document (Converted from uploaded image)  | GET   | /doc/id/pdf      |",
+        "| Get the PDF document's SHA-256 hash                   | GET   | /doc/id/pdf-hash |",
+        "| Get the contained text (Detected by OCR)              | GET   | /doc/id/text     |",
+        "| List the # of occurrences per unique contained token  | GET   | /doc/id/tokens   |",
+        "+-------------------------------------------------------+-------+------------------+"
+    ]), 200)
 
 
 @ app.route("/doc/<id>/tokens")
@@ -96,22 +130,31 @@ def get_doc_image_by_id(id):
     return serve_file(f"/opt/paperplane/db/{id}/image")
 
 
+@app.route("/status")
+def get_status():
+    db_footprint = run_native_cmd("du -sh /opt/paperplane/db;").split('\t')[0]
+    return (stringify_list([
+        f"Background jobs:    {num_background_jobs}",
+        f"Database footprint: {db_footprint}"
+    ]), 200)
+
+
 @ app.route("/upload", methods=["POST"])
-def archive_image():
-    if "file" in flask.request.files:
-        image = flask.request.files["file"]
-        if image:
+def handle_upload():
+    if "file" not in flask.request.files:
+        return flask.abort(400)
+    else:
+        try:
+            image = flask.request.files["file"]
             image_path = f"/opt/paperplane/db/{image.filename}"
-            try:
-                start_time = time.time()
-                image.save(image_path)
-                invoke_archive_script([image_path])
-                os.remove(image_path)
-                return (("Successfully archived %s in %0.2f sec.\n" % (
-                    image.filename, time.time() - start_time)), 200)
-            except:
-                return flask.abort(500)
-    return flask.abort(400)
+            image.save(image_path)
+            run_native_cmd_async(
+                f"/bin/sh /bin/scripts/archive.sh {image_path};"
+                f"rm -f {image_path};",
+                on_success=dbgprint, on_error=dbgprint)
+            return (f"Processing {image.filename} in the background...\n", 200)
+        except:
+            return flask.abort(500)
 
 
 app.run(debug=True, host="0.0.0.0", port=80)

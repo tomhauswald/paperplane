@@ -25,8 +25,11 @@ std::string ToAbsolutePath(std::string const &path) {
 
 std::vector<std::string> GetSubdirectories(std::string const &path) {
   std::vector<std::string> subdirs;
-  for (auto const &entry : std::filesystem::directory_iterator(path))
-    subdirs.push_back(entry.path().string());
+  for (auto const &entry : std::filesystem::directory_iterator(path)) {
+    if (entry.is_directory()) {
+      subdirs.push_back(entry.path().string());
+    }
+  }
   return subdirs;
 }
 

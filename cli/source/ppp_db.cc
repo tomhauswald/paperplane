@@ -89,10 +89,10 @@ GetMostFrequentTokens(Document const &doc, size_t n) {
 
 void DumpDatabase(Database const &db) {
   printf("Database %s\n", db.path.c_str());
-  printf(" |\n");
   for (auto const &doc : db.documents) {
     auto path = GetDocumentPath(db, doc);
 
+    printf(" |\n");
     printf(" +-- Document (Image Hash = %s)\n", doc.image_hash.c_str());
     printf(" |    |\n");
     printf(" |    +-- PDF Path      : %s\n", (path + "/pdf").c_str());
