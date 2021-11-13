@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 
 project(paperplane)
 
+set(CMAKE_CXX_STANDARD 20)
+
 add_executable(pppcli
   ./source/ppp_cli.cc
   ./source/ppp_db.cc
@@ -9,8 +11,6 @@ add_executable(pppcli
 )
 
 target_compile_options(pppcli
-  PRIVATE -std=c++20
-  PRIVATE -Ofast
   PRIVATE -march=native
   PRIVATE -Wall
   PRIVATE -Wextra

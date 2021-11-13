@@ -1,0 +1,26 @@
+FROM python:3.9.0-alpine3.12
+
+EXPOSE 80
+
+RUN apk update
+RUN apk upgrade
+
+RUN apk add cmake
+RUN apk add coreutils
+RUN apk add docker
+RUN apk add g++
+RUN apk add make
+
+RUN pip install flask
+
+COPY ./cli/ /tmp/pppcli.source/
+WORKDIR /tmp/pppcli.source
+RUN mkdir -p build 
+WORKDIR /tmp/pppcli.source/build
+RUN cmake -DCMAKE_BUILD_TYPE=RelWithDebugInfo ..
+RUN make 
+RUN install /tmp/pppcli.source/build/pppcli /bin/pppcli
+
+COPY ./scripts/ /bin/scripts/
+
+CMD [ "python", "-u", "/bin/server.py" ]

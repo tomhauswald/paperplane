@@ -22,21 +22,25 @@ std::vector<std::string> Split(std::string const &str, char sep) {
 }
 
 Database LoadDatabase(std::string const &path) {
-  auto db = Database{.path = fs::ToAbsolutePath(path)};
+  std::vector<Document> documents;
 
   for (auto const &dir : fs::GetSubdirectories(path)) {
-    auto &doc = db.documents.emplace_back(
-        Document{.image_hash = fs::GetBasename(dir),
-                 .pdf_hash = fs::ReadFirstLineFromFile(dir + "/pdf-hash")});
 
+    std::unordered_map<std::string, size_t> token_occurrences;
     for (auto const &token_file_line : fs::ReadLinesFromFile(dir + "/tokens")) {
       const auto parts = Split(TrimWhitespace(token_file_line), ' ');
       ppp_assert(parts.size() == 2);
-      doc.token_occurrences.emplace(parts[1], std::stoull(parts[0]));
+      token_occurrences.emplace(parts[1], std::stoull(parts[0]));
     }
+
+    documents.emplace_back(
+        Document{.image_hash = fs::GetBasename(dir),
+                 .pdf_hash = fs::ReadFirstLineFromFile(dir + "/pdf-hash"),
+                 .token_occurrences = std::move(token_occurrences)});
   }
 
-  return db;
+  return Database{.path = fs::ToAbsolutePath(path),
+                  .documents = std::move(documents)};
 }
 
 std::string GetDocumentPath(Database const &db, Document const &doc) {
@@ -115,7 +119,10 @@ float ComputeScore(Document const &doc, Query const &query) {
   for (auto const &[dtok, count] : doc.token_occurrences) {
     for (auto const &qtok : query.tokens) {
       if (dtok.find(qtok) != std::string::npos) {
-        score += static_cast<float>(qtok.size() * count);
+        score += 1.0f * qtok.size() * count;
+      }
+      if (qtok.find(dtok) != std::string::npos) {
+        score += 1.0f * dtok.size() * count;
       }
     }
   }

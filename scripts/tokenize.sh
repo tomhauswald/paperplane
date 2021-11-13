@@ -1,5 +1,3 @@
-#!/bin/bash
-
 cat ${1}                                       \
  | sed s/Ä/Ae/g                                \
  | sed s/ä/ae/g                                \
