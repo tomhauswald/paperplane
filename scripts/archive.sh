@@ -1,18 +1,22 @@
+set -e
+set -u
 set -o pipefail
 
-if [ ! -f "${1}" ]; then
-  echo "Usage: /bin/sh archive.sh /path/to/image1 ... /path/to/imageN"
+if [ ! -f "${1-}" ]; then
+  echo "Usage: /bin/bash archive.sh /path/to/image1 ... /path/to/imageN"
   exit 1
 fi
 
 for input in "${@}"; do
   
   src_image_path="$(realpath ${input})"
-
-  image_hash=$(/bin/sh "$(dirname ${0})/hash.sh" ${src_image_path})
+  image_name=$(basename ${src_image_path})
+  pdf_name="${image_name%.*}.pdf"
+  
+  image_hash=$(/bin/bash "$(dirname ${0})/hash.sh" ${src_image_path})
   doc_dir="/opt/paperplane/db/${image_hash}"
 
-  install -Dm 0644 ${src_image_path} ${doc_dir}/image
+  install -Dm 0644 ${src_image_path} ${doc_dir}/${image_name}
 
   docker run \
    --rm --init --privileged \
@@ -28,14 +32,18 @@ for input in "${@}"; do
    --force-ocr \
    --image-dpi=100 \
    --sidecar=/mnt/doc/text \
-   /mnt/doc/image \
-   /mnt/doc/pdf
+   "/mnt/doc/${image_name}" \
+   "/mnt/doc/${pdf_name}" \
+  || true # Ignore docker retval to do proper cleanup.
+
+  ln -sf "${doc_dir}/${image_name}" ${doc_dir}/image
+  ln -sf "${doc_dir}/${pdf_name}"   ${doc_dir}/pdf
 
   if [ -f ${doc_dir}/pdf ]; then
-    /bin/sh "$(dirname ${0})/hash.sh"     "${doc_dir}/pdf"   > "${doc_dir}/pdf-hash"
-    /bin/sh "$(dirname ${0})/tokenize.sh" "${doc_dir}/text"  > "${doc_dir}/tokens"
+    /bin/bash "$(dirname ${0})/hash.sh"     "${doc_dir}/pdf"   > "${doc_dir}/pdf-hash"
+    /bin/bash "$(dirname ${0})/tokenize.sh" "${doc_dir}/text"  > "${doc_dir}/tokens"
   else
-    echo "Failed to convert image to PDF."
+    echo "Failed to convert image to PDF, cleaning up..."
     rm -rf ${doc_dir}
   fi
 

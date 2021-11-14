@@ -5,6 +5,7 @@ EXPOSE 80
 RUN apk update
 RUN apk upgrade
 
+RUN apk add bash
 RUN apk add cmake
 RUN apk add coreutils
 RUN apk add docker
@@ -21,7 +22,5 @@ WORKDIR /tmp/pppcli.source/build
 RUN cmake -DCMAKE_BUILD_TYPE=RelWithDebugInfo ..
 RUN make 
 RUN install /tmp/pppcli.source/build/pppcli /bin/pppcli
-
-COPY ./scripts/ /bin/scripts/
 
 CMD [ "python", "-u", "/bin/server.py" ]

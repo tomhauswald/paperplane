@@ -1,3 +1,7 @@
+set -e
+set -u
+set -o pipefail
+
 cat ${1}                                       \
  | sed s/Ä/Ae/g                                \
  | sed s/ä/ae/g                                \
