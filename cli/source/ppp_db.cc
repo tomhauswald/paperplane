@@ -25,6 +25,8 @@ Database LoadDatabase(std::string const &path) {
   std::vector<Document> documents;
 
   for (auto const &dir : fs::GetSubdirectories(path)) {
+    if (dir.find(".upload") != std::string::npos) // Skip upload portal.
+      continue;
 
     std::unordered_map<std::string, size_t> token_occurrences;
     for (auto const &token_file_line : fs::ReadLinesFromFile(dir + "/tokens")) {
